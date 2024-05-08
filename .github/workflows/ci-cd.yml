@@ -1,0 +1,43 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+
+      - name: Archive artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-artifact
+          path: build
+
+      - name: Deploy to test environment
+        # Define steps for deploying to test environment
+        # This could involve pushing the built code to a test server or deploying to a test platform
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "O pipeline de CI/CD falhou. Por favor, verifique e corrija as etapas necessárias." | mail -s "CI/CD Pipeline Failed" user@example.com
