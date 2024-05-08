@@ -1,4 +1,4 @@
-name: CI/CD para React com GitHub Actions
+name: CI/CD para React com GitHub Actions e SonarCloud
 
 on:
   push:
@@ -29,12 +29,12 @@ jobs:
       - name: Request approval for deployment (opcional)
         if: github.event.pull_request.head.repo.owner == github.event.repo.owner && github.event.pull_request.head.repo.name == github.event.repo.name
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         steps:
           - name: Request approval for deployment
             uses: actions/github-script@v6
             with:
-              github-token: ${{ secrets.GH_TOKEN }}
+              github-token: ${{ secrets.GITHUB_TOKEN }}
               script: |
                 github.repos.createOrUpdateEnvironment(
                   owner: ${{ github.context.repo.owner }},
@@ -50,29 +50,17 @@ jobs:
                   }
                 )
 
-      - name: Deploy to staging environment
-        if: github.event.pull_request.head.repo.owner == github.event.repo.owner && github.event.pull_request.head.repo.name == github.event.repo.name
+      - name: Generate code coverage report (opcional)
+        run: npm run coverage
+
+      - name: Analyze code with SonarCloud
+        uses: SonarSource/sonarcloud-github-action@master
         env:
-          # Variáveis de ambiente para deploy
-          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
-        steps:
-          - name: Checkout repository
-            uses: actions/checkout@v3
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-          - name: Download GitHub release artifact
-            uses: actions/download-artifact@v3
-            with:
-              name: react-app
-              path: ./build
-
-          # Comandos de deploy específicos da sua plataforma (Netlify, Vercel)
-          - name: Deploy to staging using Netlify
-            run: |
-              # ... comandos Netlify ...
-
-          - name: Deploy to staging using Vercel
-            run: |
-              # ... comandos Vercel ...
+      - name: Deploy to staging environment
+        if: github.event.pull_request.head.repo.owner == github.event.pull_request.head.repo.name && github.event
 
       - name: Notify on failure (opcional)
         if: failure()
