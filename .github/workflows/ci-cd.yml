@@ -1,22 +1,15 @@
-name: CI/CD Pipeline
+name: CI/CD para React com GitHub Actions
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '16'
+        uses: actions/checkout@v3
 
       - name: Install dependencies
         run: npm install
@@ -24,22 +17,77 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-      - name: Build application
+      - name: Build React application
         run: npm run build
 
-      - name: Archive artifact
-        uses: actions/upload-artifact@v2
+      - name: Create GitHub release
+        uses: actions/upload-artifact@v3
         with:
-          name: build-artifact
-          path: build
+          name: react-app
+          path: ./build
 
-      - name: Notify on failure
-        if: failure()   # Executar somente se algum dos passos anteriores falhar
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GH_TOKEN }}
-          repository: ${{ github.repository }}
-          branch: ${{ github.ref }}
-          event_name: "failure"
-          body: |
-            O pipeline de CI/CD falhou. Por favor, verifique e corrija as etapas necessárias.
+      - name: Request approval for deployment (opcional)
+        if: github.event.pull_request.head.repo.owner == github.event.repo.owner && github.event.pull_request.head.repo.name == github.event.repo.name
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        steps:
+          - name: Request approval for deployment
+            uses: actions/github-script@v6
+            with:
+              github-token: ${{ secrets.GH_TOKEN }}
+              script: |
+                github.repos.createOrUpdateEnvironment(
+                  owner: ${{ github.context.repo.owner }},
+                  repo: ${{ github.context.repo.repo }},
+                  environment: production,
+                  request_reviews: {
+                    teams: [
+                      "seu-time-github"
+                    ],
+                    users: [
+                      "usuario-github"
+                    ]
+                  }
+                )
+
+      - name: Deploy to staging environment
+        if: github.event.pull_request.head.repo.owner == github.event.repo.owner && github.event.pull_request.head.repo.name == github.event.repo.name
+        env:
+          # Variáveis de ambiente para deploy
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+        steps:
+          - name: Checkout repository
+            uses: actions/checkout@v3
+
+          - name: Download GitHub release artifact
+            uses: actions/download-artifact@v3
+            with:
+              name: react-app
+              path: ./build
+
+          # Comandos de deploy específicos da sua plataforma (Netlify, Vercel)
+          - name: Deploy to staging using Netlify
+            run: |
+              # ... comandos Netlify ...
+
+          - name: Deploy to staging using Vercel
+            run: |
+              # ... comandos Vercel ...
+
+      - name: Notify on failure (opcional)
+        if: failure()
+        env:
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+        steps:
+          - name: Send email notification
+            uses: dawidd6/sendgrid-action@v1
+            with:
+              api_key: ${{ secrets.SENDGRID_API_KEY }}
+              from: "seu-nome@seudominio.com"
+              to: ${{ secrets.RECIPIENT_EMAIL }}
+              subject: "Falha no pipeline de CI/CD para React"
+              body: |
+                O pipeline de CI/CD para o projeto React falhou na etapa "${{ steps.name }}".
+
+                Acesse o GitHub Actions para mais detalhes: https://github.com/${{ github.context.repo.owner }}/${{ github.context.repo.repo }}/actions/runs/${{ github.context.workflow_id }}
