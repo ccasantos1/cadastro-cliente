@@ -35,5 +35,11 @@ jobs:
 
       - name: Notify on failure
         if: failure()   # Executar somente se algum dos passos anteriores falhar
-        run: |
-          echo "O pipeline de CI/CD falhou. Por favor, verifique e corrija as etapas necessárias." | mail -s "CI/CD Pipeline Failed" ccasantos83@hotmail.com
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          repository: ${{ github.repository }}
+          branch: ${{ github.ref }}
+          event_name: "failure"
+          body: |
+            O pipeline de CI/CD falhou. Por favor, verifique e corrija as etapas necessárias.
