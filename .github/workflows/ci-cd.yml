@@ -13,10 +13,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '14'
+          node-version: '16'
 
       - name: Install dependencies
         run: npm install
@@ -32,14 +32,6 @@ jobs:
         with:
           name: build-artifact
           path: build
-
-      - name: Deploy to test environment
-        if: success()   # Executar somente se os passos anteriores forem bem-sucedidos
-        run: |
-          # Coloque aqui os comandos específicos para fazer o deploy da aplicação no ambiente de teste
-          echo "Deploying application to test environment"
-          # Por exemplo, você pode copiar os arquivos para um servidor via SSH
-          scp -r build/* user@example.com:/path/to/test/environment
 
       - name: Notify on failure
         if: failure()   # Executar somente se algum dos passos anteriores falhar
